@@ -13,6 +13,9 @@ namespace Emailer
         [JsonProperty("senderName")]
         public string SenderName { get; set; }
 
+        [JsonProperty("telephone")]
+        public string Telephone { get; set; }
+
         [JsonProperty("subject")]
         public string Subject { get; set; }
 

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Mail;
 using System.Text;
 using System.Threading;
@@ -50,27 +52,33 @@ namespace Emailer
 
             log.LogInformation("Email sent successfully from '{SenderName}'<{SenderEmail}>.", emailData.SenderName,
                 emailData.SenderEmail);
+
             return new OkObjectResult("Email sent successfully.");
         }
 
-        private static Task SendGridEmail(EmailData emailData, CancellationToken cancellationToken)
+        static Task SendGridEmail(EmailData emailData, CancellationToken cancellationToken)
         {
             var settingApiKey = Environment.GetEnvironmentVariable("SENDGRID_APIKEY");
-            var settingRecipient = Environment.GetEnvironmentVariable("SENDGRID_RECIPIENT");
 
-            var email = new SendGridMessage();
-            email.From = new EmailAddress(emailData.SenderEmail, emailData.SenderName);
-            email.AddTo(settingRecipient);
+            var email = new SendGridMessage {From = new EmailAddress(emailData.SenderEmail, emailData.SenderName)};
+            email.AddTos(GetAddresses());
+            email.SetFrom(new EmailAddress(emailData.SenderEmail, emailData.SenderName));
             email.Subject = emailData.Subject.Normalize(NormalizationForm.FormKD);
-            var message = string.Format($"Sender Name:{0}\n\rSender Email: {1}\n\rMessage: {2}", emailData.SenderName, emailData.SenderEmail,
-                emailData.Message);
-            email.PlainTextContent = message.Normalize(NormalizationForm.FormKD);
+            var message =
+                $"{emailData.Message}<br><br>{emailData.SenderName}<br>{emailData.SenderEmail}<br>{emailData.Telephone}";
+            email.HtmlContent = message.Normalize(NormalizationForm.FormKD);
 
             var client = new SendGridClient(settingApiKey);
             return client.SendEmailAsync(email, cancellationToken);
         }
 
-        private static bool ValidateEmailData(EmailData emailData)
+        static List<EmailAddress> GetAddresses()
+        {
+            var settingRecipients = Environment.GetEnvironmentVariable("SENDGRID_RECIPIENT");
+            return settingRecipients.Split(';').Select(r => new EmailAddress(r)).ToList();
+        }
+
+        static bool ValidateEmailData(EmailData emailData)
         {
             if (emailData == null)
             {
